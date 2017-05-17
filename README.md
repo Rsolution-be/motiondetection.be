@@ -26,6 +26,7 @@ Howto install:
 
 
 Useful CRON's for Raspberry in combination with motiondetection.be:
+
 sudo crontab -u motion -e
 
     # restart Camera thread1 every minute. (circumvent green images on light changes with Raspberry camera, refocus camera)
