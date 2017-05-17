@@ -5,7 +5,7 @@
 #   http://motiondetection.be
 #               
 #   USAGE: 
-#    . curluploader.sh "[ImageToUpload]" "[CamName or Empty]" "[limitThrotlleBytes]" "[username]" "[password]" "[uploadKey]"
+#    . curluploader.sh "[ImageToUpload]" "[CamName or Empty]" "[limitThrotlleBytes]" "[username]" "[uploadKey]"
 #       You can create config.sh to override variables: camname,limitThrotlleBytes,uploadUser,uploadKey,uploadBackend
 #           -> This way you don't need to provide them on the commandline.
 #
@@ -29,7 +29,7 @@ copy_paste
 #
 #       Using this with MOTION (example):
 #           - add in thread1.conf:
-#               on_picture_save $(pwd)/curlUploader.sh %f "[CamName or Empty]" "[limitThrotlleBytes]" "[username]" "[password]" "[uploadKey]"
+#               on_picture_save $(pwd)/curlUploader.sh %f "[CamName or Empty]" "[limitThrotlleBytes]" "[username]" "[uploadKey]"
 #
 <<copy_paste
 TESTING in bash:
