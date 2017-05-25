@@ -44,7 +44,7 @@ limitThrotlleBytes=${3-34952} # 34952b/s=2mb/min  69905b/s=4mb/min
 uploadUser=${4-}; # if not isset then use ''
 uploadKey=${5-}; # if not isset then use ''
 
-uploadBackend=http://motiondetection.be/upload.php
+uploadBackend=https://motiondetection.be/upload.php
 
 
 if [ ! -f "$uploadFile" ] 
@@ -206,7 +206,7 @@ trap finish SIGINT TERM
 touch $countThrottlepath
 updateFileWithLock "currentRunning=\$(cat $countThrottlepath); if [ \"\$currentRunning\" == '' ]; then currentRunning=0;fi; (( currentRunning++ )); if [ \"\$currentRunning\" == '1' ]; then echo \$currentRunning > $countThrottlepath; fi; " "$countThrottlepath"
 
-if [[ "$currentRunning" == "1" ]]; then
+if [[ "$currentRunning" -lt "2" ]]; then
 	echo "PROCESSING PREVIOUS failed images in $qPath"
 
 	loopCount=0
@@ -237,8 +237,6 @@ if [[ "$currentRunning" == "1" ]]; then
 else
     echo Other running instances detected: $currentRunning: no queue retry;
 fi
-
-#updateFileWithLock "currentRunning=\$(cat $countThrottlepath); (( currentRunning-- )); echo \$currentRunning > $countThrottlepath" "$countThrottlepath"
 
 trap - SIGINT TERM
 
