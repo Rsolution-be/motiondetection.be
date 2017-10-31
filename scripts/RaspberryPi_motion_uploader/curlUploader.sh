@@ -33,7 +33,7 @@ copy_paste
 #
 <<copy_paste
 TESTING in bash:
-    cd /var/tmp/motion_uploads/;watch -n 1 "echo Running Retries: \$(cat currentRunningRetries.txt); cat rateLimit.txt ;cat throtleMeasureSince;sec=\$(( \$(date +%s) - \$(cat throtleMeasureSince) ));echo \$(( \$(cat throtleMeasureBytes) / 1024 / \$sec )) kb/s in \$sec s.;echo \$(ls -laht /var/tmp/motion_uploads/todo/*.todo | wc -l) TODO items;ls -laht /var/tmp/motion_uploads/;echo \$(date -r currentRunningRetries.txt); tail /var/log/syslog"
+    cd /var/tmp/motion_uploads/;watch -n 1 "echo Running Retries: \$(cat /tmp/currentRunningRetries.txt); cat /tmp/rateLimit.txt ;cat /tmp/throtleMeasureSince;sec=\$(( \$(date +%s) - \$(cat /tmp/throtleMeasureSince) ));echo \$(( \$(cat /tmp/throtleMeasureBytes) / 1024 / \$sec )) kb/s in \$sec s.;echo \$(ls -laht /var/tmp/motion_uploads/todo/*.todo | wc -l) TODO items;ls -laht /var/tmp/motion_uploads/;echo \$(date -r /tmp/currentRunningRetries.txt); tail /var/log/syslog"
 copy_paste
 #
 #
@@ -204,7 +204,7 @@ function finish {
 trap finish SIGINT TERM
 
 touch $countThrottlepath
-updateFileWithLock "currentRunning=\$(cat $countThrottlepath); if [ \"\$currentRunning\" == '' ]; then currentRunning=0;fi; (( currentRunning++ )); if [ \"\$currentRunning\" == '1' ]; then echo \$currentRunning > $countThrottlepath; fi; " "$countThrottlepath"
+updateFileWithLock "currentRunning=\$(cat $countThrottlepath); if [ \"\$currentRunning\" == '' ]; then currentRunning=0;fi; (( currentRunning++ )); if [ \"\$currentRunning\" -lt '2' ]; then echo \$currentRunning > $countThrottlepath; fi; " "$countThrottlepath"
 
 if [[ "$currentRunning" -lt "2" ]]; then
 	echo "PROCESSING PREVIOUS failed images in $qPath"
