@@ -51,7 +51,7 @@ if [ ! -f "$uploadFile" ]
 then
     echo "uploadFile Not found: $uploadFile" | logger -t 'Webcam upload';
     echo "uploadFile Not found: $uploadFile";
-    return;
+    exit 1;
 fi
 
 
@@ -59,6 +59,7 @@ qPath=/var/tmp/motion_uploads/todo/
 qPathImgs=$qPath"img/"
 mkdir -p $qPathImgs
 countThrottlepath=/tmp/currentRunningRetries.txt
+runningUpload=/tmp/currentRunningUpload.txt
 
 # rate limit => should be removed on reboots => tmp path
 rateLimitPath=/tmp/rateLimit.txt
@@ -71,17 +72,17 @@ CONFIGFILE=$scriptPath"/config.sh" && test -f $CONFIGFILE && . $CONFIGFILE
 
 # test PROVIDED config and fail with message + logger
 function testEmpty {
-    if [ "$1" == "" ]
+    if [ "$2" == "" ]
 	then
-	  echo "Missing parameter/field '$2' add to config.sh";
-	  echo "Missing parameter/field '$2' add to config.sh" | logger -t 'Webcam upload';
-	  return 2;
+	  echo "Missing parameter/field '$1' add to config.sh";
+	  echo "Missing parameter/field '$1' add to config.sh" | logger -t 'Webcam upload';
+	  exit 2;
     fi
 
 }
-testEmpty $uploadFile uploadFile
-testEmpty $uploadUser uploadUser
-testEmpty $uploadKey uploadKey
+testEmpty uploadFile $uploadFile 
+testEmpty uploadUser $uploadUser 
+testEmpty uploadKey $uploadKey 
 
 type="image"
 [[ "$uploadFile" == *"snapshot"* || "$uploadFile" == *"ping"* ]] && type=ping;
@@ -123,26 +124,23 @@ function checkresultRemoveAddQue {
 	timestamp=$2
 	qPath=$3
 	logLine=$4
+	runningUpload=$5
+
+	updateFileWithLock "running=\$(cat $runningUpload);if [ \"\$running\" == '' ]; then running=0;fi; (( running++ )); if [ \"\$running\" -lt '2' ]; then echo \$running > $runningUpload; fi; " "$runningUpload"
 	
-	touch $rateLimitPath
-	updateFileWithLock "lastUpload=\$(cat $rateLimitPath); [ \"\$lastUpload\" == '' ] && lastUpload=0" "$rateLimitPath"
+	if [[ "$running" -lt "2" ]]; then	
+	    touch $rateLimitPath
+	    updateFileWithLock "lastUpload=\$(cat $rateLimitPath); [ \"\$lastUpload\" == '' ] && lastUpload=0" "$rateLimitPath"
 
-	#echo $(( $lastUpload+500 < $(date +%s%3N) ));
+	    curlResult=
+	    throtthleResult=0
 
-	curlResult=
-	throtthleResult=0
-	# check last upload within 500ms
-	#if (( $lastUpload+500 < $(date +%s%3N))) ; then
 	    . $scriptPath/countThrottle.sh "$uploadFile" "$limitThrotlleBytes"
 	    throtthleResult=$?
-        #else
-	#    curlResult=" within 500ms "
-	#fi
+	    
+	    curlResultUploadOK=
 
-	
-	curlResultUploadOK=
-
-	if [ "$throtthleResult" == "1" ] ; then
+	    if [ "$throtthleResult" == "1" ] ; then
 		#echo $curlCMD
 		curlResult=$($curlCMD);
 		echo "CURL result: $curlResult ";
@@ -151,10 +149,17 @@ function checkresultRemoveAddQue {
 
 		# rate limit
 		updateFileWithLock "echo \$(date +%s%3N) > $rateLimitPath" "$rateLimitPath"
-	else
+	    else
 		curlResult="Too fast, canceled by CLIENT ($curlResult)"
 		[ "$throtthleResult" == "0" ] && curlResult="$curlResult (by Throttle)"
 		echo $curlResult
+	    fi
+	    # Ok: reset Running:
+	    updateFileWithLock "running=\$(cat $runningUpload); (( running-- )); echo \$running > $runningUpload" "$runningUpload"
+	else
+	    # double run!
+	    # echo "ERROR uploading: (double RUN) $logLine shedule retry $timestamp" | logger -t 'Webcam upload';
+	    curlResult="(double run ($running))"
 	fi
 	
 	if [ "$curlResultUploadOK" == "upload ok" ] || [ "$type" == "ping" ]
@@ -169,7 +174,9 @@ function checkresultRemoveAddQue {
 	fi
 }  
 
-checkresultRemoveAddQue "$curlCMD" "$timestampFile" "$qPath" "$logLine"
+touch $runningUpload
+checkresultRemoveAddQue "$curlCMD" "$timestampFile" "$qPath" "$logLine" "$runningUpload"
+
 ##### END uploading current, NEXT check & upload queue
 #no more ping types, we don't shedule these! -> they are not relevant (too old)
 type=
@@ -225,7 +232,7 @@ if [[ "$currentRunning" -lt "2" ]]; then
 	     
 	     # no bash for floats!
 	     throttleSleep=$(echo print $limitThrotlleBytes / 35000. | perl)
-	     [ "$contentRetry" != "" ] && sleep $throttleSleep && checkresultRemoveAddQue "$contentRetry" "$timestamp" "$qPath" "RETRY (sleep:$throttleSleep s.) ($currentRunning)/$loopCount $f" 
+	     [ "$contentRetry" != "" ] && sleep $throttleSleep && checkresultRemoveAddQue "$contentRetry" "$timestamp" "$qPath" "RETRY (sleep:$throttleSleep s.) ($currentRunning)/$loopCount $f" "$runningUpload"
 	   fi
 
 	   if (( $loopCount > 50 )); then
@@ -235,7 +242,7 @@ if [[ "$currentRunning" -lt "2" ]]; then
 
 	updateFileWithLock "currentRunning=\$(cat $countThrottlepath); (( currentRunning-- )); echo \$currentRunning > $countThrottlepath" "$countThrottlepath"
 else
-    echo Other running instances detected: $currentRunning: no queue retry;
+    echo "Other running instances detected: $currentRunning: no queue retry";
 fi
 
 trap - SIGINT TERM
