@@ -126,9 +126,9 @@ function checkresultRemoveAddQue {
 	logLine=$4
 	runningUpload=$5
 
-	updateFileWithLock "running=\$(cat $runningUpload);if [ \"\$running\" == '' ]; then running=0;fi; (( running++ )); if [ \"\$running\" -lt '2' ]; then echo \$running > $runningUpload; fi; " "$runningUpload"
+	updateFileWithLock "running=\$(cat $runningUpload);if [ \"\$running\" == '' ]; then running=0;fi; (( running++ )); echo \$running > $runningUpload; " "$runningUpload"
 	
-	if [[ "$running" -lt "2" ]]; then	
+	if [[ "$running" -lt "2" ]] || [ "$type" == "ping" ]; then
 	    touch $rateLimitPath
 	    updateFileWithLock "lastUpload=\$(cat $rateLimitPath); [ \"\$lastUpload\" == '' ] && lastUpload=0" "$rateLimitPath"
 
@@ -154,13 +154,13 @@ function checkresultRemoveAddQue {
 		[ "$throtthleResult" == "0" ] && curlResult="$curlResult (by Throttle)"
 		echo $curlResult
 	    fi
-	    # Ok: reset Running:
-	    updateFileWithLock "running=\$(cat $runningUpload); (( running-- )); echo \$running > $runningUpload" "$runningUpload"
 	else
 	    # double run!
 	    # echo "ERROR uploading: (double RUN) $logLine shedule retry $timestamp" | logger -t 'Webcam upload';
 	    curlResult="(double run ($running))"
 	fi
+	# Ok: reset Running:
+	updateFileWithLock "running=\$(cat $runningUpload); (( running-- )); echo \$running > $runningUpload" "$runningUpload"
 	
 	if [ "$curlResultUploadOK" == "upload ok" ] || [ "$type" == "ping" ]
 	then
