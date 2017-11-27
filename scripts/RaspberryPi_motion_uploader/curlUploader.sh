@@ -232,7 +232,7 @@ if [[ "$currentRunning" -lt "2" ]]; then
 	     
 	     # no bash for floats!
 	     # throttleSleep=$(echo print $limitThrotlleBytes / 35000. | perl)
-	     throttleSleep=$(echo 'print 3 - ($limitThrotlleBytes * 0.00005)' | perl)
+	     throttleSleep=$(echo "print 3 - ($limitThrotlleBytes * 0.00005)" | perl)
 	     [ "$contentRetry" != "" ] && sleep $throttleSleep && checkresultRemoveAddQue "$contentRetry" "$timestamp" "$qPath" "RETRY (sleep:$throttleSleep s.) ($currentRunning)/$loopCount $f" "$runningUpload"
 	   fi
 
