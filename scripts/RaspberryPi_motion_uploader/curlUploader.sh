@@ -54,6 +54,12 @@ then
     exit 1;
 fi
 
+if [ $(wc -c <"$uploadFile") -eq 0 ]
+then
+    # remove + log!
+    echo "No queue $uploadFile is empty!"
+    echo "No queue $uploadFile is empty!" | logger -t 'Webcam upload';
+fi
 
 qPath=/var/tmp/motion_uploads/todo/
 qPathImgs=$qPath"img/"
@@ -222,6 +228,14 @@ if [[ "$currentRunning" -lt "2" ]]; then
 	  if [ -f "$f" ];
 	  then
 	     (( loopCount++ ))
+	    
+	    if [ $(wc -c <"$f") -eq 0 ]
+	    then
+		# remove + log!
+		echo "No reUpload $f is empty!"
+		echo "No reUpload $f is empty!" | logger -t 'Webcam upload';
+	    fi
+
 	     #echo "Processing RETRY$loopCount $f file..."  | logger -t 'Webcam upload';
 	     contentRetry=$(cat $f)
 	     rm -f "$f"
